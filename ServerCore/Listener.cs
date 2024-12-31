@@ -42,6 +42,7 @@ namespace ServerCore
                 OnAcceptCompleted(null, args);
         }
 
+        // 멀티 스레드 환경에서 돌아가기 때문에 주의해야하는 함수다.
         void OnAcceptCompleted(object sender, SocketAsyncEventArgs args)
         {
             if (args.SocketError == SocketError.Success)
