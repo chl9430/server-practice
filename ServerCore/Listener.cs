@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ServerCore
 {
-    class Listener
+    public class Listener
     {
         Socket _listenSocket;
         // 매개변수는 없고 Session을 리턴해주는 함수형식을 받는다
