@@ -14,20 +14,20 @@ namespace ServerCore
 
         object _lock = new object();
         Queue<byte[]> _sendQueue = new Queue<byte[]>();
-        bool _pending = false;
+        List<ArraySegment<byte>> _pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs _sendArgs = new SocketAsyncEventArgs();
+        SocketAsyncEventArgs _recvArgs = new SocketAsyncEventArgs();
 
         public void Start(Socket socket)
         {
             _socket = socket;
-            SocketAsyncEventArgs recvArgs  = new SocketAsyncEventArgs();
-            recvArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
+            _recvArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
             // 받을 버퍼 설정
-            recvArgs.SetBuffer(new byte[1024], 0, 1024);
+            _recvArgs.SetBuffer(new byte[1024], 0, 1024);
 
             _sendArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnSendCompleted);
 
-            RegisterRecv(recvArgs);
+            RegisterRecv();
         }
 
         public void Send(byte[] sendBuff)
@@ -35,7 +35,10 @@ namespace ServerCore
             lock (_lock)
             {
                 _sendQueue.Enqueue(sendBuff);
-                if (_pending == false)
+
+                // 현재 대기중인 데이터가 없으면(내가 1빠로 보내게 될 데이터라면)
+                // 현재 대기중인 데이터가 있다면 대기한다.
+                if (_pendingList.Count == 0)
                     RegisterSend();
             }
         }
@@ -54,10 +57,16 @@ namespace ServerCore
 
         void RegisterSend()
         {
-            _pending = true;
-            byte[] buff = _sendQueue.Dequeue();
-            _sendArgs.SetBuffer(buff, 0, buff.Length);
+            while (_sendQueue.Count > 0)
+            {
+                byte[] buff = _sendQueue.Dequeue();
+                // ArraySegment(구조체) : 스택영역에 할당된다.
+                _pendingList.Add(new ArraySegment<byte>(buff, 0, buff.Length));
+            }
 
+            _sendArgs.BufferList = _pendingList;
+
+            // 데이터를 보내는 비동기 함수
             bool pending = _socket.SendAsync(_sendArgs);
             if (pending == false)
                 OnSendCompleted(null, _sendArgs);
@@ -71,10 +80,15 @@ namespace ServerCore
                 {
                     try
                     {
-                        if (_sendQueue.Count > 0) // 보내는 와중에 큐에 또 뭔가가 추가된다면 레지스터한다.
+                        // 이미 보낸 기존 데이터들은 전부 지워준다.
+                        _sendArgs.BufferList = null;
+                        _pendingList.Clear();
+
+                        Console.WriteLine($"Transferred Bytes : {_sendArgs.BytesTransferred}");
+
+                        // 보내는 와중에 큐에 또 뭔가가 추가된다면 레지스터한다.
+                        if (_sendQueue.Count > 0)
                             RegisterSend();
-                        else
-                            _pending = false;
                     }
                     catch (Exception e)
                     {
@@ -88,11 +102,11 @@ namespace ServerCore
             }
         }
 
-        void RegisterRecv(SocketAsyncEventArgs args)
+        void RegisterRecv()
         {
-            bool pending = _socket.ReceiveAsync(args);
+            bool pending = _socket.ReceiveAsync(_recvArgs);
             if (pending == false)
-                OnRecvCompleted(null, args);
+                OnRecvCompleted(null, _recvArgs);
         }
 
         void OnRecvCompleted(object sender, SocketAsyncEventArgs args)
@@ -104,7 +118,7 @@ namespace ServerCore
                 {
                     string recvData = Encoding.UTF8.GetString(args.Buffer, args.Offset, args.BytesTransferred);
                     Console.WriteLine($"[From Client] {recvData}");
-                    RegisterRecv(args);
+                    RegisterRecv();
                 }
                 catch (Exception e)
                 {
