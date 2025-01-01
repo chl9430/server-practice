@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace ServerCore
 {
-    class Session
+    abstract class Session
     {
         Socket _socket;
         int _disconnected = 0;
@@ -17,6 +18,12 @@ namespace ServerCore
         List<ArraySegment<byte>> _pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs _sendArgs = new SocketAsyncEventArgs();
         SocketAsyncEventArgs _recvArgs = new SocketAsyncEventArgs();
+
+        // 각 이벤트 별로 콘텐츠 부분에서 해야할 일들이 정의되어 있는 함수
+        public abstract void OnConnected(EndPoint endPoint);
+        public abstract void OnRecv(ArraySegment<byte> buffer);
+        public abstract void OnSend(int numOfBytes);
+        public abstract void OnDisconnected(EndPoint endPoint);
 
         public void Start(Socket socket)
         {
@@ -48,6 +55,8 @@ namespace ServerCore
             // 클라에서 동시에 disconnect요청이 올 수도 있다.
             if (Interlocked.Exchange(ref _disconnected, 1) == 1)
                 return;
+
+            OnDisconnected(_socket.RemoteEndPoint);
 
             _socket.Shutdown(SocketShutdown.Both);
             _socket.Close();
@@ -84,7 +93,7 @@ namespace ServerCore
                         _sendArgs.BufferList = null;
                         _pendingList.Clear();
 
-                        Console.WriteLine($"Transferred Bytes : {_sendArgs.BytesTransferred}");
+                        OnSend(_sendArgs.BytesTransferred);
 
                         // 보내는 와중에 큐에 또 뭔가가 추가된다면 레지스터한다.
                         if (_sendQueue.Count > 0)
@@ -116,8 +125,8 @@ namespace ServerCore
             {
                 try
                 {
-                    string recvData = Encoding.UTF8.GetString(args.Buffer, args.Offset, args.BytesTransferred);
-                    Console.WriteLine($"[From Client] {recvData}");
+                    OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
+
                     RegisterRecv();
                 }
                 catch (Exception e)
