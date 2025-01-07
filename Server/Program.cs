@@ -9,45 +9,45 @@ using ServerCore;
 
 namespace Server
 {
-    class Knight
+    class Packet
     {
-        public int hp;
-        public int attack;
+        public ushort size; // 2바이트 자료형
+        public ushort packetId;
     }
 
-    class GameSession : Session
+    class GameSession : PacketSession
     {
         public override void OnConnected(EndPoint endPoint)
         {
             Console.WriteLine($"OnConnected : {endPoint}");
 
-            Knight knight = new Knight() { hp = 100, attack = 10 };
+            //Packet packet = new Packet() { size = 100, packetId = 10 };
 
-            // 바이트를 원하는 데이터 크기만큼 축소시켜준다.
-            ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
-            byte[] buffer = BitConverter.GetBytes(knight.hp);
-            byte[] buffer2 = BitConverter.GetBytes(knight.attack);
-            Array.Copy(buffer, 0, openSegment.Array, openSegment.Offset, buffer.Length);
-            Array.Copy(buffer2, 0, openSegment.Array, openSegment.Offset + buffer.Length, buffer2.Length);
+            //// 바이트를 원하는 데이터 크기만큼 축소시켜준다.
+            //ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
+            //byte[] buffer = BitConverter.GetBytes(packet.size);
+            //byte[] buffer2 = BitConverter.GetBytes(packet.packetId);
+            //Array.Copy(buffer, 0, openSegment.Array, openSegment.Offset, buffer.Length);
+            //Array.Copy(buffer2, 0, openSegment.Array, openSegment.Offset + buffer.Length, buffer2.Length);
 
-            // 실질적으로 보낼 배열 세그먼트를 만들어 반환한다.
-            ArraySegment<byte> sendBuff = SendBufferHelper.Close(buffer.Length + buffer2.Length);
+            //// 실질적으로 보낼 배열 세그먼트를 만들어 반환한다.
+            //ArraySegment<byte> sendBuff = SendBufferHelper.Close(buffer.Length + buffer2.Length);
 
-            Send(sendBuff);
-            Thread.Sleep(1000);
+            // Send(sendBuff);
+            Thread.Sleep(5000);
             Disconnect();
+        }
+
+        public override void OnRecvPacket(ArraySegment<byte> buffer)
+        {
+            ushort size = BitConverter.ToUInt16(buffer.Array, buffer.Offset);
+            ushort id = BitConverter.ToUInt16(buffer.Array, buffer.Offset + 2);
+            Console.WriteLine($"RecvPacketId: {id}, Size: {size}");
         }
 
         public override void OnDisconnected(EndPoint endPoint)
         {
             Console.WriteLine($"OnDisconnected : {endPoint}");
-        }
-
-        public override int OnRecv(ArraySegment<byte> buffer)
-        {
-            string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-            Console.WriteLine($"[From Client] {recvData}");
-            return buffer.Count;
         }
 
         public override void OnSend(int numOfBytes)

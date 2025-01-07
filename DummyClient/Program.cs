@@ -6,16 +6,33 @@ using System.Text;
 
 namespace DummyClient
 {
+    class Packet
+    {
+        public ushort size;
+        public ushort packetId;
+    }
+
     class GameSession : Session
     {
         public override void OnConnected(EndPoint endPoint)
         {
             Console.WriteLine($"OnConnected : {endPoint}");
 
+            Packet packet = new Packet() { size = 4, packetId = 7 };
+
             // 보낸다
             for (int i = 0; i < 5; i++)
             {
-                byte[] sendBuff = Encoding.UTF8.GetBytes($"Hello World!{i}");
+                // 바이트를 원하는 데이터 크기만큼 축소시켜준다.
+                ArraySegment<byte> openSegment = SendBufferHelper.Open(4096);
+                byte[] buffer = BitConverter.GetBytes(packet.size);
+                byte[] buffer2 = BitConverter.GetBytes(packet.packetId);
+                Array.Copy(buffer, 0, openSegment.Array, openSegment.Offset, buffer.Length);
+                Array.Copy(buffer2, 0, openSegment.Array, openSegment.Offset + buffer.Length, buffer2.Length);
+
+                // 실질적으로 보낼 배열 세그먼트를 만들어 반환한다.
+                ArraySegment<byte> sendBuff = SendBufferHelper.Close(packet.size);
+
                 Send(sendBuff);
             }
         }
