@@ -12,6 +12,7 @@ namespace Server
     class Program
     {
         static Listener _listener = new Listener();
+        public static GameRoom Room = new GameRoom();
 
         static void Main(string[] args)
         {
@@ -26,7 +27,7 @@ namespace Server
             // ipAddr : 식당주소, 7777: 정문인지 후문인지?
             // www.rookiss.com => ip가 변경되어도 도메인으로 관리가능
 
-            _listener.Init(endPoint, () => { return new ClientSession(); });
+            _listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });
             Console.WriteLine("Listening...");
 
             while (true)
