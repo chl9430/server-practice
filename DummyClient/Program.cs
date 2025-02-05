@@ -23,19 +23,23 @@ namespace DummyClient
 
             Connector connector = new Connector();
 
-            connector.Connect(endPoint, () => { return new ServerSession(); });
+            // 클라이언트를 여러개 생성
+            connector.Connect(endPoint, 
+                () => { return SessionManager.Instance.Generate(); },
+                10);
 
             while (true)
             {
                 try
                 {
+                    SessionManager.Instance.SendForEach();
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.ToString());
                 }
 
-                Thread.Sleep(100);
+                Thread.Sleep(250);
             }
         }
     }
