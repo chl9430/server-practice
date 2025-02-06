@@ -15,7 +15,8 @@ namespace Server
         {
             Console.WriteLine($"OnConnected : {endPoint}");
 
-            Program.Room.Push(() => Program.Room.Enter(this));
+            // 콘텐츠단 코드
+            Program.Room.Enter(this);
         }
 
         public override void OnRecvPacket(ArraySegment<byte> buffer)
@@ -28,8 +29,7 @@ namespace Server
             SessionManager.Instance.Remove(this);
             if (Room != null)
             {
-                GameRoom room = Room;
-                room.Push(() => room.Leave(this));
+                Room.Leave(this);
                 Room = null;
             }
 
