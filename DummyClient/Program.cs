@@ -26,7 +26,7 @@ namespace DummyClient
             // 클라이언트를 여러개 생성
             connector.Connect(endPoint, 
                 () => { return SessionManager.Instance.Generate(); },
-                10);
+                500);
 
             while (true)
             {
