@@ -11,10 +11,20 @@ namespace Server
     {
         List<ClientSession> _sessions = new List<ClientSession>();
         JobQueue _jobQueue = new JobQueue();
+        List<ArraySegment<byte>> _pendingList = new List<ArraySegment<byte>>();
 
         public void Push(Action job)
         {
             _jobQueue.Push(job);
+        }
+
+        public void Flush()
+        {
+            foreach (ClientSession s in _sessions)
+                s.Send(_pendingList);
+
+            Console.WriteLine($"Flushed {_pendingList.Count} items");
+            _pendingList.Clear();
         }
 
         // 특정 클라이언트로부터 패킷을 받으면 그 해당 패킷을
@@ -26,8 +36,7 @@ namespace Server
             packet.chat = $"{chat} I am {packet.playerId}";
             ArraySegment<byte> segment = packet.Write();
 
-            foreach (ClientSession s in _sessions)
-                s.Send(segment);
+            _pendingList.Add(segment);
         }
 
         public void Enter(ClientSession session)
