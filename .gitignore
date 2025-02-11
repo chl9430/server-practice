@@ -370,7 +370,7 @@ FodyWeavers.xsd
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
 Client/[Ll]ibrary/
-/[Tt]emp/
+Client/[Tt]emp/
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
