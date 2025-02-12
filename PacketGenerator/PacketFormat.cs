@@ -80,7 +80,7 @@ public class PacketManager
         public static string fileFormat =
 @"using ServerCore;
 using System;
-using System.Text;
+using System.Collections.Generic;
 
 public enum PacketID
 {{
